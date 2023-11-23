@@ -1,0 +1,65 @@
+import streamlit as st
+import requests
+import mysql.connector
+
+# URL de la API
+api_url = "https://stand-by-me.herokuapp.com/api/v1/stands"
+
+# Hacer una solicitud GET a la API
+response = requests.get(api_url)
+
+# Verificar si la solicitud fue exitosa (código 200)
+if response.status_code == 200:
+    # Convertir la respuesta a formato JSON
+    data = response.json()
+
+    # Mostrar los datos en la aplicación Streamlit
+    st.title("Datos de Stands")
+
+    # Crear una tabla para mostrar los datos
+    st.table(data)
+
+    # Conectar a la base de datos MySQL
+    conn = mysql.connector.connect(
+        host='localhost',
+        user='root',
+        password='FILUchch117123*',
+        database='bigdata'
+    )
+
+    cursor = conn.cursor()
+
+    # Crear una tabla en la base de datos si no existe
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS stands (
+            id INT PRIMARY KEY,
+            name VARCHAR(255),
+            alternateName VARCHAR(255),
+            japaneseName VARCHAR(255),
+            image VARCHAR(255),
+            standUser VARCHAR(255),
+            chapter VARCHAR(255),
+            abilities TEXT,
+            battlecry TEXT
+        )
+    ''')
+
+    # Insertar datos en la tabla evitando duplicados
+    for stand in data:
+        cursor.execute('''
+            INSERT IGNORE INTO stands (id, name, alternateName, japaneseName, image, standUser, chapter, abilities, battlecry)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ''', (
+            stand.get("id"), stand.get("name"), stand.get("alternateName"),
+            stand.get("japaneseName"), stand.get("image"), stand.get("standUser"),
+            stand.get("chapter"), stand.get("abilities"), stand.get("battlecry")
+        ))
+
+    # Guardar los cambios y cerrar la conexión
+    conn.commit()
+    conn.close()
+
+    st.success("Datos exportados a la base de datos MySQL con éxito.")
+
+else:
+    st.error(f"Error al obtener datos de la API. Código de estado: {response.status_code}")
